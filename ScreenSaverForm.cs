@@ -9,9 +9,8 @@ namespace ScreenSaver
 {
     public class ScreenSaverForm : Form
     {
-		private Point MouseXY;
-
-		private readonly int ScreenNumber;
+        private Point MouseXY;
+        private readonly int ScreenNumber;
 
         private PictureBox SSPictureBox;
         public Bitmap SSBitmap;
@@ -27,6 +26,9 @@ namespace ScreenSaver
         int CurrentLinePos = 0;
         int CreditLineCyclesShown = 0;
         int BeforeChangeCyclesShown = 0;
+
+        public bool DoShowCredits = true;  //show credits on start
+        public bool DoShowConsole = false;
 
         public void ReorderColumnIndexesDownMove(int colIndex, bool clearfirst = false)
         {
@@ -44,26 +46,25 @@ namespace ScreenSaver
 
         public ScreenSaverForm(int scrn)
 		{
-			InitializeComponent();
-			ScreenNumber = scrn;
-            ScreenInstances.ScrForms.Add(this);
+            ScreenNumber = scrn;
+            InitializeComponent();
         }
 
-		protected override void Dispose( bool disposing )
+		protected override void Dispose(bool disposing)
 		{
-            ScreenInstances.GlobalCTS.Cancel();
-			base.Dispose( disposing );
+            ScreenInstances.ScrForms.Remove(this);
+            base.Dispose(disposing);
 		}
 
 		private void ScreenSaverForm_Load(object sender, EventArgs e)
 		{
-			this.Bounds = Screen.AllScreens[ScreenNumber].Bounds;
+            Bounds = Screen.AllScreens[ScreenNumber].Bounds;
             if (!System.Diagnostics.Debugger.IsAttached)
             {
                 Cursor.Hide();
                 TopMost = true;
             }
-            SSBitmap = new Bitmap(this.Bounds.Width, this.Bounds.Height);
+            SSBitmap = new Bitmap(Bounds.Width, Bounds.Height);
             SpriteColumns = (int)Math.Ceiling((double)SSBitmap.Width / 16);
             SpriteRows = (int)Math.Ceiling((double)SSBitmap.Height / 24);
             UsedKatakanaIndexes = new int[SpriteColumns, SpriteRows];
@@ -76,7 +77,6 @@ namespace ScreenSaver
             }
             ColBitMaps = new ColBitMap[SpriteColumns];
             Array.Clear(ColBitMaps, 0, SpriteColumns);
-            LoadKatakanaSprites();
             ShowScreenSaver();
         }
 
@@ -87,56 +87,67 @@ namespace ScreenSaver
                 int cycles = 0;
                 while (true)
                 {
-                    if (ScreenInstances.ShowCredits)
+                    try
                     {
-                        ShowCredits();
-                    }
-                    else
-                    if (ScreenInstances.ShowConsole)
-                    {
-                        ShowConsoleStrings();
-                    }
-                    else
-                    {
-                        using (Graphics graphics = Graphics.FromImage(SSBitmap))
+                        Invoke((MethodInvoker)delegate
                         {
-                            int modcount = SpriteColumns / 10;    //we will modify only 10% of columns per step
-                            for (int i = 0; i < modcount; i++)
+                            if (DoShowCredits)
                             {
-                                var selectedcol = ScreenInstances.EntropySrc.Next(SpriteColumns);
-                                TransformColumn(selectedcol);
-                                if (ColBitMaps[selectedcol].IsModified)
+                                ShowCredits();
+                            }
+                            else
+                            if (DoShowConsole)
+                            {
+                                ShowConsoleStrings();
+                            }
+                            else
+                            {
+                                using (Graphics graphics = Graphics.FromImage(SSBitmap))
                                 {
-                                    Point sp = new Point(selectedcol * 16, 0);
-                                    graphics.DrawImageUnscaled(ColBitMaps[selectedcol].ColumnBitMap, sp);
+                                    int modcount = SpriteColumns / 10;    //we will modify only 10% of columns per step
+                                    for (int i = 0; i < modcount; i++)
+                                    {
+                                        var selectedcol = ScreenInstances.EntropySrc.Next(SpriteColumns);
+                                        TransformColumn(selectedcol);
+                                        if (ColBitMaps[selectedcol].IsModified)
+                                        {
+                                            Point sp = new Point(selectedcol * 16, 0);
+                                            graphics.DrawImageUnscaled(ColBitMaps[selectedcol].ColumnBitMap, sp);
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
 
-                    if (!ScreenInstances.ShowCredits)
-                    {
-                        if (cycles < 3000)
-                        {
-                            cycles++;
-                        }
-                        else
-                        {
-                            cycles = 0;
-                            ScreenInstances.ShowCredits = true;
-                            using (Graphics graphics = Graphics.FromImage(SSBitmap))
+                            if (!DoShowCredits)
                             {
-                                graphics.Clear(Color.Black);
+                                if (cycles < 3000)
+                                {
+                                    cycles++;
+                                }
+                                else
+                                {
+                                    cycles = 0;
+                                    DoShowCredits = true;
+                                    using (Graphics graphics = Graphics.FromImage(SSBitmap))
+                                    {
+                                        graphics.Clear(Color.Black);
+                                    }
+                                }
                             }
-                        }
-                    }
 
-                    this.Invoke((MethodInvoker)delegate
+                            SSPictureBox.Image = SSBitmap;
+                            SSPictureBox.Refresh();
+                        });
+                        await Task.Delay(10);
+                    }
+                    catch (TaskCanceledException)
                     {
-                        SSPictureBox.Image = SSBitmap;
-                        SSPictureBox.Refresh();
-                    });
-                    await Task.Delay(10);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        var s = ex.ToString();
+                    }
                 }
             }, ScreenInstances.GlobalCTS.Token);
         }
@@ -154,13 +165,16 @@ namespace ScreenSaver
                         if (i < CurrentLinePos)
                         {
                             Point sp = new Point((startcol + CurrentLinePos) * 16, row * 24);
-                            graphics.DrawImageUnscaled(ScreenInstances.katakana[ScreenInstances.GetLetterSprite(ScreenInstances.CreditsStrings[CurrentCreditLine][i])], sp);
+
+                            graphics.DrawImageUnscaled(ScreenInstances.GetKatakanaSprite(ScreenInstances.GetLetterSprite(ScreenInstances.CreditsStrings[CurrentCreditLine][i]), false), sp);
+
                         }
                         Point sp2 = new Point((startcol + CurrentLinePos + 1) * 16, row * 24);
-                        graphics.DrawImageUnscaled(ScreenInstances.katakana[114 + 120 * (CreditLineCyclesShown % 4)], sp2);
+                        graphics.DrawImageUnscaled(ScreenInstances.GetKatakanaSprite(114 + 120 * (CreditLineCyclesShown % 4), false), sp2);
                         CreditLineCyclesShown++;
                     }
-                } else
+                }
+                else
                 {
                     CreditLineCyclesShown = 0;
                     if (CurrentLinePos < ScreenInstances.CreditsStrings[CurrentCreditLine].Length)
@@ -172,10 +186,11 @@ namespace ScreenSaver
                         if (BeforeChangeCyclesShown < 10)
                         {
                             Point sp2 = new Point((startcol + CurrentLinePos + 1) * 16, row * 24);
-                            graphics.DrawImageUnscaled(ScreenInstances.katakana[114 + 120 * (BeforeChangeCyclesShown % 4)], sp2);
+                            graphics.DrawImageUnscaled(ScreenInstances.GetKatakanaSprite(114 + 120 * (BeforeChangeCyclesShown % 4), false), sp2);
                             BeforeChangeCyclesShown++;
                             return;
-                        } else
+                        }
+                        else
                         {
                             BeforeChangeCyclesShown = 0;
                         }
@@ -189,8 +204,8 @@ namespace ScreenSaver
                             if (CurrentCreditLine == ScreenInstances.CreditsStrings.Count)
                             {
                                 CurrentCreditLine = 0;
-                                ScreenInstances.ShowCredits = false;
-                                ScreenInstances.ShowConsole = true;
+                                DoShowCredits = false;
+                                DoShowConsole = true;
                             }
                         }
                     }
@@ -209,10 +224,11 @@ namespace ScreenSaver
                         if (i < CurrentLinePos)
                         {
                             Point sp = new Point(CurrentLinePos * 16, 0);
-                            graphics.DrawImageUnscaled(ScreenInstances.katakana[ScreenInstances.GetLetterSprite(ScreenInstances.ConsoleStrings[CurrentCreditLine][i])], sp);
+                            graphics.DrawImageUnscaled(ScreenInstances.GetKatakanaSprite(ScreenInstances.GetLetterSprite(ScreenInstances.ConsoleStrings[CurrentCreditLine][i]), false), sp);
                         }
                         Point sp2 = new Point((CurrentLinePos + 1) * 16, 0);
-                        graphics.DrawImageUnscaled(ScreenInstances.katakana[114 + 120 * (CreditLineCyclesShown % 4)], sp2);
+                        graphics.DrawImageUnscaled(ScreenInstances.GetKatakanaSprite(114 + 120 * (CreditLineCyclesShown % 4), false), sp2);
+
                         CreditLineCyclesShown++;
                     }
                 }
@@ -228,7 +244,7 @@ namespace ScreenSaver
                         if (BeforeChangeCyclesShown < 10)
                         {
                             Point sp2 = new Point((CurrentLinePos + 1) * 16, 0);
-                            graphics.DrawImageUnscaled(ScreenInstances.katakana[114 + 120 * (BeforeChangeCyclesShown % 4)], sp2);
+                            graphics.DrawImageUnscaled(ScreenInstances.GetKatakanaSprite(114 + 120 * (BeforeChangeCyclesShown % 4), false), sp2);
                             BeforeChangeCyclesShown++;
                             return;
                         }
@@ -242,11 +258,12 @@ namespace ScreenSaver
                             SolidBrush shadowBrush = new SolidBrush(Color.Black);
                             Rectangle clearrect = new Rectangle(0, 0, (ScreenInstances.ConsoleStrings[CurrentCreditLine].Length + 2) * 16, 24);
                             graphics.FillRectangle(shadowBrush, clearrect);
+
                             CurrentCreditLine++;
                             if (CurrentCreditLine == ScreenInstances.ConsoleStrings.Count)
                             {
                                 CurrentCreditLine = 0;
-                                ScreenInstances.ShowConsole = false;
+                                DoShowConsole = false;
                             }
                         }
                     }
@@ -278,30 +295,6 @@ namespace ScreenSaver
             }
         }
 
-        private void LoadKatakanaSprites()
-		{
-            using (var raw = new Bitmap(Properties.Resources.spd))
-            {
-                for (int i = 0; i < ScreenInstances.katakana.Length; i++)
-                {
-                    var xptr = i * 16 % 640;
-                    var yptr = ((int)(i / 40)) * 24;
-                    Rectangle cloneRect = new Rectangle(xptr, yptr, 15, 24);
-                    ScreenInstances.katakana[i] = raw.Clone(cloneRect, PixelFormat.Format32bppArgb);
-                }
-            }
-            using (var raw = new Bitmap(Properties.Resources.spd_glitch))
-            {
-                for (int i = 0; i < ScreenInstances.katakana.Length; i++)
-                {
-                    var xptr = i * 16 % 640;
-                    var yptr = ((int)(i / 40)) * 24;
-                    Rectangle cloneRect = new Rectangle(xptr, yptr, 15, 24);
-                    ScreenInstances.katakana_glitch[i] = raw.Clone(cloneRect, PixelFormat.Format32bppArgb);
-                }
-            }
-        }
-
 		private void OnMouseEvent(object sender, MouseEventArgs e)
 		{
             if (!System.Diagnostics.Debugger.IsAttached)
@@ -309,9 +302,13 @@ namespace ScreenSaver
                 if (!MouseXY.IsEmpty)
                 {
                     if (MouseXY != new Point(e.X, e.Y))
-                        Close();
+                    {
+                        ScreenInstances.TerminateSS();
+                    }
                     if (e.Clicks > 0)
-                        Close();
+                    {
+                        ScreenInstances.TerminateSS();
+                    }
                 }
                 MouseXY = new Point(e.X, e.Y);
             }
@@ -321,7 +318,7 @@ namespace ScreenSaver
 		{
             if (!System.Diagnostics.Debugger.IsAttached)
             {
-                Close();
+                ScreenInstances.TerminateSS();
             }
         }
 
@@ -336,14 +333,15 @@ namespace ScreenSaver
             ((System.ComponentModel.ISupportInitialize)(this.SSPictureBox)).BeginInit();
             this.SuspendLayout();
             // 
-            // sspicture
+            // SSPictureBox
             // 
             this.SSPictureBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.SSPictureBox.Location = new System.Drawing.Point(0, 0);
-            this.SSPictureBox.Name = "sspicture";
+            this.SSPictureBox.Name = "SSPictureBox";
             this.SSPictureBox.Size = new System.Drawing.Size(1024, 768);
             this.SSPictureBox.TabIndex = 0;
             this.SSPictureBox.TabStop = false;
+            this.SSPictureBox.WaitOnLoad = true;
             this.SSPictureBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.OnMouseEvent);
             this.SSPictureBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.OnMouseEvent);
             // 

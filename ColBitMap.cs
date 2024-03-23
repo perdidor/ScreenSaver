@@ -17,20 +17,6 @@ namespace ScreenSaver
             IsModified = false;
         }
 
-        private Bitmap GetKatakanaSprite(int index) 
-        {
-            Bitmap resbitmap = null;
-            if (ScreenInstances.EntropySrc.Next(1000) >= 995)    //chance to glitch is 0.1%
-            {
-                resbitmap = ScreenInstances.katakana_glitch[index];
-            }
-            else
-            {
-                resbitmap = ScreenInstances.katakana[index];
-            }
-            return resbitmap;
-        }
-
         public void InPlaceMutation()
         {
             var movesdown = ScreenInstances.EntropySrc.Next(1,4);
@@ -61,7 +47,7 @@ namespace ScreenSaver
                             default:
                                 break;
                         }
-                        Bitmap resbitmap = GetKatakanaSprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]);
+                        Bitmap resbitmap = ScreenInstances.GetKatakanaSprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]);
 
                         Point destp = new Point(0, i * 24);
                         graphics.DrawImageUnscaled(resbitmap, destp);
@@ -108,7 +94,7 @@ namespace ScreenSaver
             {
                 Point sp = new Point(0, 0);
                 var selectedindex = index == -1 ? ScreenInstances.EntropySrc.Next(ScreenInstances.katakana.Length) : index;
-                Bitmap resbitmap = GetKatakanaSprite(selectedindex);
+                Bitmap resbitmap = ScreenInstances.GetKatakanaSprite(selectedindex);
                 graphics.DrawImageUnscaled(resbitmap, sp);
                 ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, 0] = selectedindex;
             }

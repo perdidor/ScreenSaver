@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace ScreenSaver
 {
@@ -16,8 +18,61 @@ namespace ScreenSaver
         public static CancellationTokenSource GlobalCTS = new CancellationTokenSource();
         public static  List<int> EmptySprites = new List<int>() { -1, 100, 220, 340, 460, 26, 116, 117, 118, 119, 146, 136, 137, 138, 139, 266, 256, 257, 258, 259, 376, 386, 387, 388, 389 };
         
-        public static bool ShowCredits = true;  //show credits on start
-        public static bool ShowConsole = false;
+        static ScreenInstances()
+        {
+            LoadKatakanaSprites();
+        }
+
+        public static void TerminateSS()
+        {
+            GlobalCTS.Cancel();
+            Application.Exit();
+        }
+
+        public static Bitmap GetKatakanaSprite(int index, bool canglitch = true)
+        {
+            Bitmap resbitmap = null;
+            try
+            {
+                if (ScreenInstances.EntropySrc.Next(1000) >= 995 && canglitch)    //chance to glitch is 0.1%
+                {
+                    resbitmap = ScreenInstances.katakana_glitch[index];
+                }
+                else
+                {
+                    resbitmap = ScreenInstances.katakana[index];
+                }
+            }
+            catch (Exception ex)
+            {
+                var s = ex.ToString();
+            }
+            return resbitmap;
+        }
+
+        private static void LoadKatakanaSprites()
+        {
+            using (var raw = new Bitmap(Properties.Resources.spd))
+            {
+                for (int i = 0; i < katakana.Length; i++)
+                {
+                    var xptr = i * 16 % 640;
+                    var yptr = ((int)(i / 40)) * 24;
+                    Rectangle cloneRect = new Rectangle(xptr, yptr, 15, 24);
+                    katakana[i] = raw.Clone(cloneRect, PixelFormat.Format32bppArgb);
+                }
+            }
+            using (var raw = new Bitmap(Properties.Resources.spd_glitch))
+            {
+                for (int i = 0; i < katakana.Length; i++)
+                {
+                    var xptr = i * 16 % 640;
+                    var yptr = ((int)(i / 40)) * 24;
+                    Rectangle cloneRect = new Rectangle(xptr, yptr, 15, 24);
+                    katakana_glitch[i] = raw.Clone(cloneRect, PixelFormat.Format32bppArgb);
+                }
+            }
+        }
 
         public static List<string> CreditsStrings = new List<string>()
         {
@@ -29,7 +84,7 @@ namespace ScreenSaver
 
         public static List<string> ConsoleStrings = new List<string>()
         {
-            "Hello, Neo...",
+            "Wake up, Neo...",
             "You have shitted. The Matrix is full of your shit...",
             "Follow the white powder",
             "Knock, knock, Neo",
