@@ -1,24 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace ScreenSaver
 {
-    internal class ScreenInstances
+    internal static class ScreenInstances
     {
         public static List<ScreenSaverForm> ScrForms = new List<ScreenSaverForm>();
         public static Random EntropySrc = new Random((int)DateTime.Now.Ticks);
         public static Bitmap[] katakana = new Bitmap[480];
+        public static Bitmap[] katakana_glitch = new Bitmap[480];
         public static CancellationTokenSource GlobalCTS = new CancellationTokenSource();
         public static  List<int> EmptySprites = new List<int>() { -1, 100, 220, 340, 460, 26, 116, 117, 118, 119, 146, 136, 137, 138, 139, 266, 256, 257, 258, 259, 376, 386, 387, 388, 389 };
-        public static bool ShowCredits = true;
+        
+        public static bool ShowCredits = true;  //show credits on start
+        public static bool ShowConsole = false;
+
         public static List<string> CreditsStrings = new List<string>()
         {
             "The Matrix®",
             ".NET WinForms screensaver",
             "© 2024 by Gordon Freeman [gfr20141201@gmail.com]",
             "inspired by and dedicated to Burning_Thornbush [burning_thornbush@yahoo.com]",
+        };
+
+        public static List<string> ConsoleStrings = new List<string>()
+        {
+            "Hello, Neo...",
+            "You have shitted. The Matrix is full of your shit...",
+            "Follow the white powder",
+            "Knock, knock, Neo",
         };
 
         public static int GetLetterSprite(char ch)
@@ -64,11 +78,21 @@ namespace ScreenSaver
             {
                 res = 452;
             }
+            if (ch == ',')
+            {
+                res = 453;
+            }
             if (ch == '_')
             {
                 res = 460;
             }
             return res;
         }
+
+        public static bool CheckIndexEmptySprite(int katakanaIndex)
+        {
+            return EmptySprites.Contains(katakanaIndex);
+        }
+
     }
 }

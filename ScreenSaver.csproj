@@ -102,6 +102,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Content Include="App.ico" />
+    <Content Include="spd_glitch.bmp" />
     <None Include="app.config" />
     <None Include="Readme.md" />
     <None Include="spd.bmp" />

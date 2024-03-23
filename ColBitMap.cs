@@ -17,6 +17,20 @@ namespace ScreenSaver
             IsModified = false;
         }
 
+        private Bitmap GetKatakanaSprite(int index) 
+        {
+            Bitmap resbitmap = null;
+            if (ScreenInstances.EntropySrc.Next(1000) >= 995)    //chance to glitch is 0.1%
+            {
+                resbitmap = ScreenInstances.katakana_glitch[index];
+            }
+            else
+            {
+                resbitmap = ScreenInstances.katakana[index];
+            }
+            return resbitmap;
+        }
+
         public void InPlaceMutation()
         {
             var movesdown = ScreenInstances.EntropySrc.Next(1,4);
@@ -30,7 +44,7 @@ namespace ScreenSaver
                 {
                     var mutationdice = ScreenInstances.EntropySrc.Next(2);
                     var mutationdice2 = ScreenInstances.EntropySrc.Next(3);
-                    if (!CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]) && mutationdice2 >= 0)
+                    if (!ScreenInstances.CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]) && mutationdice2 >= 0)
                     {
                         switch (mutationdice)
                         {
@@ -47,16 +61,13 @@ namespace ScreenSaver
                             default:
                                 break;
                         }
+                        Bitmap resbitmap = GetKatakanaSprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]);
+
                         Point destp = new Point(0, i * 24);
-                        graphics.DrawImageUnscaled(ScreenInstances.katakana[ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]], destp);
+                        graphics.DrawImageUnscaled(resbitmap, destp);
                     }
                 }
             }
-        }
-
-        private bool CheckIndexEmptySprite(int katakanaIndex)
-        {
-            return ScreenInstances.EmptySprites.Contains(katakanaIndex);
         }
 
         public void MoveDown(bool clearfisrst = false)
@@ -97,7 +108,8 @@ namespace ScreenSaver
             {
                 Point sp = new Point(0, 0);
                 var selectedindex = index == -1 ? ScreenInstances.EntropySrc.Next(ScreenInstances.katakana.Length) : index;
-                graphics.DrawImageUnscaled(ScreenInstances.katakana[selectedindex], sp);
+                Bitmap resbitmap = GetKatakanaSprite(selectedindex);
+                graphics.DrawImageUnscaled(resbitmap, sp);
                 ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, 0] = selectedindex;
             }
         }
@@ -109,7 +121,7 @@ namespace ScreenSaver
                 var res = -1;
                 for (int crow = 0; crow < ScreenInstances.ScrForms[ScrNumber].SpriteRows; crow++)
                 {
-                    if (!CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, crow]))
+                    if (!ScreenInstances.CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, crow]))
                     {
                         res = crow;
                         break;
@@ -126,7 +138,7 @@ namespace ScreenSaver
                 var res = -1;
                 for (int crow = ScreenInstances.ScrForms[ScrNumber].SpriteRows - 1; crow >= 0; crow--)
                 {
-                    if (!CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, crow]))
+                    if (!ScreenInstances.CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, crow]))
                     {
                         res = crow;
                         break;
@@ -143,7 +155,7 @@ namespace ScreenSaver
                 var res = 0;
                 for (int crow = 0; crow < ScreenInstances.ScrForms[ScrNumber].SpriteRows; crow++)
                 {
-                    if (!CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, crow]))
+                    if (!ScreenInstances.CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, crow]))
                     {
                         res++;
                     }

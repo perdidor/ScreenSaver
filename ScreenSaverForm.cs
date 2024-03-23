@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -20,6 +22,11 @@ namespace ScreenSaver
         public int[,] UsedKatakanaIndexes = null;
 
         private ColBitMap[] ColBitMaps = null;
+
+        int CurrentCreditLine = 0;
+        int CurrentLinePos = 0;
+        int CreditLineCyclesShown = 0;
+        int BeforeChangeCyclesShown = 0;
 
         public void ReorderColumnIndexesDownMove(int colIndex, bool clearfirst = false)
         {
@@ -85,11 +92,16 @@ namespace ScreenSaver
                         ShowCredits();
                     }
                     else
+                    if (ScreenInstances.ShowConsole)
+                    {
+                        ShowConsoleStrings();
+                    }
+                    else
                     {
                         using (Graphics graphics = Graphics.FromImage(SSBitmap))
                         {
-                            int[] modlist = new int[SpriteColumns / 10];    //we will modify only 10% of columns per step
-                            for (int i = 0; i < modlist.Length; i++)
+                            int modcount = SpriteColumns / 10;    //we will modify only 10% of columns per step
+                            for (int i = 0; i < modcount; i++)
                             {
                                 var selectedcol = ScreenInstances.EntropySrc.Next(SpriteColumns);
                                 TransformColumn(selectedcol);
@@ -128,12 +140,6 @@ namespace ScreenSaver
                 }
             }, ScreenInstances.GlobalCTS.Token);
         }
-
-
-        int CurrentCreditLine = 0;
-        int CurrentLinePos = 0;
-        int CreditLineCyclesShown = 0;
-        int BeforeChangeCyclesShown = 0;
 
         private void ShowCredits()
         {
@@ -184,6 +190,63 @@ namespace ScreenSaver
                             {
                                 CurrentCreditLine = 0;
                                 ScreenInstances.ShowCredits = false;
+                                ScreenInstances.ShowConsole = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ShowConsoleStrings()
+        {
+            using (Graphics graphics = Graphics.FromImage(SSBitmap))
+            {
+                if (CreditLineCyclesShown < 10)
+                {
+                    for (int i = 0; i <= CurrentLinePos; i++)
+                    {
+                        if (i < CurrentLinePos)
+                        {
+                            Point sp = new Point(CurrentLinePos * 16, 0);
+                            graphics.DrawImageUnscaled(ScreenInstances.katakana[ScreenInstances.GetLetterSprite(ScreenInstances.ConsoleStrings[CurrentCreditLine][i])], sp);
+                        }
+                        Point sp2 = new Point((CurrentLinePos + 1) * 16, 0);
+                        graphics.DrawImageUnscaled(ScreenInstances.katakana[114 + 120 * (CreditLineCyclesShown % 4)], sp2);
+                        CreditLineCyclesShown++;
+                    }
+                }
+                else
+                {
+                    CreditLineCyclesShown = 0;
+                    if (CurrentLinePos < ScreenInstances.ConsoleStrings[CurrentCreditLine].Length)
+                    {
+                        CurrentLinePos++;
+                    }
+                    else
+                    {
+                        if (BeforeChangeCyclesShown < 10)
+                        {
+                            Point sp2 = new Point((CurrentLinePos + 1) * 16, 0);
+                            graphics.DrawImageUnscaled(ScreenInstances.katakana[114 + 120 * (BeforeChangeCyclesShown % 4)], sp2);
+                            BeforeChangeCyclesShown++;
+                            return;
+                        }
+                        else
+                        {
+                            BeforeChangeCyclesShown = 0;
+                        }
+                        CurrentLinePos = 0;
+                        if (CurrentCreditLine < ScreenInstances.CreditsStrings.Count)
+                        {
+                            SolidBrush shadowBrush = new SolidBrush(Color.Black);
+                            Rectangle clearrect = new Rectangle(0, 0, (ScreenInstances.ConsoleStrings[CurrentCreditLine].Length + 2) * 16, 24);
+                            graphics.FillRectangle(shadowBrush, clearrect);
+                            CurrentCreditLine++;
+                            if (CurrentCreditLine == ScreenInstances.ConsoleStrings.Count)
+                            {
+                                CurrentCreditLine = 0;
+                                ScreenInstances.ShowConsole = false;
                             }
                         }
                     }
@@ -224,7 +287,17 @@ namespace ScreenSaver
                     var xptr = i * 16 % 640;
                     var yptr = ((int)(i / 40)) * 24;
                     Rectangle cloneRect = new Rectangle(xptr, yptr, 15, 24);
-                    ScreenInstances.katakana[i] = raw.Clone(cloneRect, SSBitmap.PixelFormat);
+                    ScreenInstances.katakana[i] = raw.Clone(cloneRect, PixelFormat.Format32bppArgb);
+                }
+            }
+            using (var raw = new Bitmap(Properties.Resources.spd_glitch))
+            {
+                for (int i = 0; i < ScreenInstances.katakana.Length; i++)
+                {
+                    var xptr = i * 16 % 640;
+                    var yptr = ((int)(i / 40)) * 24;
+                    Rectangle cloneRect = new Rectangle(xptr, yptr, 15, 24);
+                    ScreenInstances.katakana_glitch[i] = raw.Clone(cloneRect, PixelFormat.Format32bppArgb);
                 }
             }
         }
