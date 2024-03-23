@@ -101,6 +101,7 @@
     <Compile Include="ScreenSaverForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Content Include="7560x1440.png" />
     <Content Include="App.ico" />
     <Content Include="spd_glitch.bmp" />
     <None Include="app.config" />
