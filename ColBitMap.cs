@@ -19,7 +19,7 @@ namespace ScreenSaver
 
         public void InPlaceMutation()
         {
-            var movesdown = ScreenInstances.EntropySrc.Next(1,4);
+            var movesdown = ScreenInstances.EntropySrc.Next(0,4);
             for (int i = 0; i < movesdown; i++)
             {
                 MoveDown(true);
@@ -28,23 +28,20 @@ namespace ScreenSaver
             {
                 for (int i = 0; i < ScreenInstances.ScrForms[ScrNumber].SpriteRows; i++)
                 {
-                    var mutationdice = ScreenInstances.EntropySrc.Next(2);
-                    var mutationdice2 = ScreenInstances.EntropySrc.Next(3);
-                    if (!ScreenInstances.CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]) && mutationdice2 >= 0)
+                    var mutationdice = ScreenInstances.EntropySrc.Next(4);
+                    if (!ScreenInstances.CheckIndexEmptySprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]))
                     {
                         switch (mutationdice)
                         {
                             case 0:
                                 {
-                                    ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i] = (ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i] + 120) % 480;
-                                }
-                                break;
-                            case 1:
-                                {
                                     ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i] = ScreenInstances.EntropySrc.Next(480);
                                 }
                                 break;
                             default:
+                                {
+                                    ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i] = (ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i] + 120) % 480;
+                                }
                                 break;
                         }
                         Bitmap resbitmap = ScreenInstances.GetKatakanaSprite(ScreenInstances.ScrForms[ScrNumber].UsedKatakanaIndexes[ColumnIndex, i]);

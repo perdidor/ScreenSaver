@@ -3,6 +3,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace ScreenSaver
 {
@@ -41,7 +42,31 @@ namespace ScreenSaver
                     ScreenInstances.ScrForms[i].Show();
                 }
             }
+            Task.Run(SSRunMMSync);
             Application.Run(ScreenInstances.ScrForms[0]);
+        }
+
+        static async Task SSRunMMSync()
+        {
+            while (ScreenInstances.ScrForms.Count(x => x.Visible) != ScreenInstances.ScrForms.Count) 
+            {
+                await Task.Delay(10);
+            }
+            while (!ScreenInstances.GlobalCTS.IsCancellationRequested)
+            {
+                List<Task> tasklist = new List<Task>();
+                foreach (ScreenSaverForm ssform in ScreenInstances.ScrForms)
+                {
+                    var newtask = new Task(() =>
+                    {
+                        ssform.DoShowScreenSaverCycle();
+                    }, ScreenInstances.GlobalCTS.Token);
+                    newtask.Start();
+                    tasklist.Add(newtask);
+                }
+                Task.WaitAll(tasklist.ToArray());
+                await Task.Delay(10);
+            }
         }
 
     }

@@ -30,6 +30,8 @@ namespace ScreenSaver
         public bool DoShowCredits = true;  //show credits on start
         public bool DoShowConsole = false;
 
+        private long Cycles = 0;
+
         public void ReorderColumnIndexesDownMove(int colIndex, bool clearfirst = false)
         {
             for (int i = SpriteRows - 1; i > 0; i--)
@@ -77,79 +79,70 @@ namespace ScreenSaver
             }
             ColBitMaps = new ColBitMap[SpriteColumns];
             Array.Clear(ColBitMaps, 0, SpriteColumns);
-            ShowScreenSaver();
         }
 
-        private void ShowScreenSaver()
+        public void DoShowScreenSaverCycle()
         {
-            Task.Run(async () =>
+            try
             {
-                int cycles = 0;
-                while (true)
+                Invoke((MethodInvoker)delegate
                 {
-                    try
+                    if (DoShowCredits)
                     {
-                        Invoke((MethodInvoker)delegate
+                        ShowCredits();
+                    }
+                    else
+                    if (DoShowConsole)
+                    {
+                        ShowConsoleStrings();
+                    }
+                    else
+                    {
+                        using (Graphics graphics = Graphics.FromImage(SSBitmap))
                         {
-                            if (DoShowCredits)
+                            int modcount = SpriteColumns / 10;    //we will modify only 10% of columns per step
+                            for (int i = 0; i < modcount; i++)
                             {
-                                ShowCredits();
-                            }
-                            else
-                            if (DoShowConsole)
-                            {
-                                ShowConsoleStrings();
-                            }
-                            else
-                            {
-                                using (Graphics graphics = Graphics.FromImage(SSBitmap))
+                                var selectedcol = ScreenInstances.EntropySrc.Next(SpriteColumns);
+                                TransformColumn(selectedcol);
+                                if (ColBitMaps[selectedcol].IsModified)
                                 {
-                                    int modcount = SpriteColumns / 10;    //we will modify only 10% of columns per step
-                                    for (int i = 0; i < modcount; i++)
-                                    {
-                                        var selectedcol = ScreenInstances.EntropySrc.Next(SpriteColumns);
-                                        TransformColumn(selectedcol);
-                                        if (ColBitMaps[selectedcol].IsModified)
-                                        {
-                                            Point sp = new Point(selectedcol * 16, 0);
-                                            graphics.DrawImageUnscaled(ColBitMaps[selectedcol].ColumnBitMap, sp);
-                                        }
-                                    }
+                                    Point sp = new Point(selectedcol * 16, 0);
+                                    graphics.DrawImageUnscaled(ColBitMaps[selectedcol].ColumnBitMap, sp);
                                 }
                             }
+                        }
+                    }
 
-                            if (!DoShowCredits)
+                    if (!DoShowCredits)
+                    {
+                        if (Cycles < 3000)
+                        {
+                            Cycles++;
+                        }
+                        else
+                        {
+                            Cycles = 0;
+                            DoShowCredits = true;
+                            using (Graphics graphics = Graphics.FromImage(SSBitmap))
                             {
-                                if (cycles < 3000)
-                                {
-                                    cycles++;
-                                }
-                                else
-                                {
-                                    cycles = 0;
-                                    DoShowCredits = true;
-                                    using (Graphics graphics = Graphics.FromImage(SSBitmap))
-                                    {
-                                        graphics.Clear(Color.Black);
-                                    }
-                                }
+                                graphics.Clear(Color.Black);
                             }
+                        }
+                    }
 
-                            SSPictureBox.Image = SSBitmap;
-                            SSPictureBox.Refresh();
-                        });
-                        await Task.Delay(10);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        var s = ex.ToString();
-                    }
-                }
-            }, ScreenInstances.GlobalCTS.Token);
+                    SSPictureBox.Image = SSBitmap;
+                    SSPictureBox.Refresh();
+                });
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                var s = ex.ToString();
+            }
         }
 
         private void ShowCredits()
